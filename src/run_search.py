@@ -16,23 +16,40 @@ from utils.metrics import heuristic_value, pairs_rate
 def ensure_cli_solver(binary_path: Path, source_cpp: Optional[Path] = None) -> None:
     """Ensure a CLI solver binary exists.
 
-    If not found, attempt to compile using g++ (or clang++ fallback). By default,
-    compile the solver from core/wastar.cpp into `binary_path`.
+    If not found, attempt to compile using g++ (or clang++ fallback).
+    Default source is `core/wastar.cpp`. For backward compatibility, this will
+    also try `olds/astar_weighted_fast.cpp` if the default source is not found.
     """
-    if source_cpp is None:
-        source_cpp = Path("core/wastar.cpp").resolve()
-    # Rebuild if missing or source is newer
-    if binary_path.exists() and os.access(binary_path, os.X_OK):
-        try:
-            if binary_path.stat().st_mtime >= source_cpp.stat().st_mtime:
-                return
-        except FileNotFoundError:
-            pass
-    if not source_cpp.exists():
+    # Determine candidate sources (explicit override takes priority)
+    candidates: List[Path]
+    if source_cpp is not None:
+        candidates = [Path(source_cpp)]
+    else:
+        candidates = [Path("core/wastar.cpp"), Path("olds/astar_weighted_fast.cpp")]
+
+    chosen_src: Optional[Path] = None
+    for cand in candidates:
+        if cand.exists():
+            chosen_src = cand
+            break
+
+    if chosen_src is None:
         # If binary already exists, keep using it without rebuilding
         if binary_path.exists() and os.access(binary_path, os.X_OK):
             return
-        raise FileNotFoundError(f"Solver source not found: {source_cpp}")
+        tried = ", ".join(str(p.resolve()) for p in candidates)
+        raise FileNotFoundError(
+            f"Solver source not found. Tried: {tried}. "
+            f"Pass --solver_src to specify a source explicitly."
+        )
+
+    # Rebuild if missing or source is newer
+    if binary_path.exists() and os.access(binary_path, os.X_OK):
+        try:
+            if binary_path.stat().st_mtime >= chosen_src.stat().st_mtime:
+                return
+        except FileNotFoundError:
+            pass
 
     binary_path.parent.mkdir(parents=True, exist_ok=True)
     cxx = shutil.which("g++") or shutil.which("clang++")
@@ -43,11 +60,11 @@ def ensure_cli_solver(binary_path: Path, source_cpp: Optional[Path] = None) -> N
         cxx,
         "-O3",
         "-std=c++20",
-        str(source_cpp),
+        str(chosen_src),
         "-o",
         str(binary_path),
     ]
-    print(f"[build] Compiling solver → {binary_path}")
+    print(f"[build] Compiling solver from {chosen_src} → {binary_path}")
     subprocess.run(cmd, check=True)
 
 
@@ -166,6 +183,7 @@ def main() -> None:
     ap.add_argument("--time_limit_s", type=float, default=None, help="per-problem time limit (seconds)")
     ap.add_argument("--solver_bin", type=str, default="core/wastar", help="path to compiled solver binary")
     ap.add_argument("--save_dir", type=str, default="artifacts/results", help="where to save solutions")
+    ap.add_argument("--solver_src", type=str, default=None, help="path to solver source .cpp (override)")
     ap.add_argument("--fast_max_small_n", type=int, default=None)
     ap.add_argument("--fast_cand_cap", type=int, default=None)
     ap.add_argument("--fast_topk", type=int, default=None)
@@ -176,7 +194,8 @@ def main() -> None:
     args = ap.parse_args()
 
     solver_bin = Path(args.solver_bin)
-    ensure_cli_solver(solver_bin)
+    solver_src = Path(args.solver_src) if args.solver_src else None
+    ensure_cli_solver(solver_bin, solver_src)
 
     fast_params = {}
     if args.fast_max_small_n is not None:
