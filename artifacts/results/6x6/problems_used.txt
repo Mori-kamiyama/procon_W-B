@@ -1,0 +1,5 @@
+problems/6x6/p000.json
+problems/6x6/p001.json
+problems/6x6/p002.json
+problems/6x6/p003.json
+problems/6x6/p004.json

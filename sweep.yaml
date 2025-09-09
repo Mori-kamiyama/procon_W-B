@@ -1,0 +1,38 @@
+program: src/trainer.py
+method: bayes
+metric:
+  name: pairs_rate_avg
+  goal: maximize
+parameters:
+  project:
+    value: procon-wastar
+  size:
+    values: [4, 6, 8, 10]
+  max_problems:
+    value: 10
+  time_limit_s:
+    value: 1.0
+  w:
+    distribution: q_uniform
+    min: 1.0
+    max: 5.0
+    q: 0.25
+  alpha:
+    distribution: uniform
+    min: 0.0
+    max: 0.5
+  tie_break:
+    values: [h_min, g_min]
+  fast_max_small_n:
+    values: [4, 5]
+  fast_cand_cap:
+    values: [64, 128, 256]
+  fast_topk:
+    values: [32, 64, 128]
+early_terminate:
+  type: hyperband
+  min_iter: 3
+command:
+  - ${env}
+  - python3
+  - ${program}
