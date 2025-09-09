@@ -17,10 +17,10 @@ def ensure_cli_solver(binary_path: Path, source_cpp: Optional[Path] = None) -> N
     """Ensure a CLI solver binary exists.
 
     If not found, attempt to compile using g++ (or clang++ fallback). By default,
-    compile the fast solver from olds/astar_weighted_fast.cpp into `binary_path`.
+    compile the solver from core/wastar.cpp into `binary_path`.
     """
     if source_cpp is None:
-        source_cpp = Path("olds/astar_weighted_fast.cpp").resolve()
+        source_cpp = Path("core/wastar.cpp").resolve()
     # Rebuild if missing or source is newer
     if binary_path.exists() and os.access(binary_path, os.X_OK):
         try:
@@ -29,6 +29,9 @@ def ensure_cli_solver(binary_path: Path, source_cpp: Optional[Path] = None) -> N
         except FileNotFoundError:
             pass
     if not source_cpp.exists():
+        # If binary already exists, keep using it without rebuilding
+        if binary_path.exists() and os.access(binary_path, os.X_OK):
+            return
         raise FileNotFoundError(f"Solver source not found: {source_cpp}")
 
     binary_path.parent.mkdir(parents=True, exist_ok=True)

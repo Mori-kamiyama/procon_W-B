@@ -57,7 +57,7 @@ wandb agent <that-sweep-id>
 
 ## 注意事項
 
-- CLIソルバーは`olds/astar_weighted_fast.cpp`から`core/wastar`に自動的にコンパイルされます（`g++`または`clang++`が必要です）。
+- CLIソルバーは`core/wastar.cpp`から`core/wastar`に自動的にコンパイルされます（`g++`または`clang++`が必要です）。
 - 問題ごとに計算されるメトリクス：
   - `pairs_rate`: 最終グリッド上でマンハッタン距離が1の値ペアの割合
   - `ops_count`: 解法における回転操作の回数
