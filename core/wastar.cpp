@@ -219,7 +219,7 @@ static void emit_solution_json(const std::vector<Operation>& ops, bool solved, b
     std::cout << "  \"h_eff\": " << heff << ",\n";
     std::cout << "  \"ops\": [\n";
     for (size_t i=0;i<out.size();++i){ const auto& op = out[i];
-        std::cout << "    {\"x\": " << op.x << ", \"y\": " << op.y << ", \"n\": " << op.n << "}";
+        std::cout << "    {\"x\": " << op.y << ", \"y\": " << op.x << ", \"n\": " << op.n << "}";
         if (i+1<out.size()) std::cout << ","; std::cout << "\n"; }
     std::cout << "  ],\n";
     std::cout << "  \"metrics\": {\n";

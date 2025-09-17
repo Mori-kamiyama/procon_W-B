@@ -16,6 +16,13 @@ def _maybe_import_wandb():
 
         return wandb
     except Exception:
+        # Fallback to a no-op logger to let local runs proceed without W&B.
+        # Print a clear warning so users notice that nothing will be sent to the web.
+        try:
+            import sys
+            print("[warn] wandb not available; running in offline dummy mode (no web logging)", file=sys.stderr)
+        except Exception:
+            pass
         class _Dummy:
             def init(self, *a, **k):
                 class _Run:
@@ -38,7 +45,7 @@ def _maybe_import_wandb():
 
 @dataclass
 class Config:
-    project: str = "procon-wastar"
+    project: str = "procon_W-B-src"
     size: int = 6
     w: float = 2.0
     max_problems: int = 5
@@ -123,6 +130,7 @@ def train(cfg: Config | Dict[str, Any]) -> Dict[str, Any]:
     time_list = []
     pr_list = []
     ops_list = []
+    ops_list_solved = []
     open_max_list = []
     nodes_expanded_list = []
     nodes_generated_list = []
@@ -146,6 +154,8 @@ def train(cfg: Config | Dict[str, Any]) -> Dict[str, Any]:
         pr_list.append(res["pairs_rate"])
         ops_list.append(res["ops_count"])
         ok_count += 1 if res["ok"] else 0
+        if res["ok"]:
+            ops_list_solved.append(res["ops_count"])
 
         # per-problem log
         run.log({
@@ -177,11 +187,28 @@ def train(cfg: Config | Dict[str, Any]) -> Dict[str, Any]:
             "ok": res["ok"],
         })
 
+    # Compute robust metrics focused on successful runs, with failure penalty
+    problems_evaluated = len(files)
+    solved_rate = (ok_count / problems_evaluated) if problems_evaluated > 0 else 0.0
+    ops_avg = float(stats.mean([x for x in ops_list if x is not None])) if ops_list else 0.0
+    ops_avg_solved = float(stats.mean(ops_list_solved)) if ops_list_solved else None
+    # Penalty coefficient balances solving vs. shortness; tune as needed
+    PENALTY_FAIL = 20.0
+    if ops_list_solved:
+        base = float(ops_avg_solved)
+        score = base + PENALTY_FAIL * (1.0 - solved_rate)
+    else:
+        # No solved instances: assign very large score to avoid being selected
+        score = 1e9
+
     summary = {
-        "problems_evaluated": len(files),
+        "problems_evaluated": problems_evaluated,
         "ok_count": ok_count,
+        "solved_rate": float(solved_rate),
         "pairs_rate_avg": float(stats.mean(pr_list)) if pr_list else 0.0,
-        "ops_avg": float(stats.mean([x for x in ops_list if x is not None])) if ops_list else 0.0,
+        "ops_avg": ops_avg,
+        "ops_avg_solved": ops_avg_solved,
+        "score": float(score),
         "time_avg_s": float(stats.mean(time_list)) if time_list else 0.0,
         "open_max_max": int(max(open_max_list)) if open_max_list else 0,
         "nodes_expanded_avg": float(stats.mean(nodes_expanded_list)) if nodes_expanded_list else None,
@@ -198,6 +225,18 @@ def train(cfg: Config | Dict[str, Any]) -> Dict[str, Any]:
             for r in table_rows:
                 table.add_data(*[r.get(c) for c in cols])
             run.log({"problems_table": table})
+        except Exception:
+            pass
+
+        # Log optimized metric explicitly for sweeps
+        try:
+            run.log({"score": summary["score"]})
+        except Exception:
+            pass
+
+        # Also log solved_rate so it shows up clearly in charts/tables
+        try:
+            run.log({"solved_rate": summary["solved_rate"]})
         except Exception:
             pass
 

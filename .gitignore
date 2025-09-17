@@ -1,2 +1,9 @@
 /AI.md
 /olds
+/artifacts/replay*
+/artifacts/results*
+/artifacts/*.csv
+/artifacts/quick*
+/env/*
+/rust/*
+/wandb/*
