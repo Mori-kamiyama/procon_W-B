@@ -10,7 +10,8 @@ import torch
 from data.greedy_dataset import enumerate_ops
 from models.policy import ModelConfig, PolicyCNN, PolicyRetNet
 from utils.io import load_problem, apply_ops
-from utils.metrics import heuristic_value
+from utils.heuristic_config import get_heuristic_config
+from utils.metrics import heuristic_is_zero, heuristic_value
 
 
 @dataclass
@@ -18,7 +19,7 @@ class EvalResult:
     solved: bool
     steps: int
     ops: List[dict]
-    final_h: int
+    final_h: float
     model_match: int
 
 
@@ -56,6 +57,9 @@ def build_model_from_checkpoint(checkpoint_path: Path, device: torch.device):
     return model, meta
 
 
+HEURISTIC_CFG = get_heuristic_config()
+
+
 def teacher_pick(
     grid: List[List[int]], ops_catalog: List[dict], seen: set[tuple]
 ) -> tuple[int, List[List[int]]]:
@@ -67,7 +71,7 @@ def teacher_pick(
         key = tuple(value for row in trial for value in row)
         if key in seen:
             continue
-        score = heuristic_value(trial)
+        score = heuristic_value(trial, HEURISTIC_CFG)
         if best_score is None or score < best_score:
             best_score = score
             best_idx = idx
@@ -89,8 +93,8 @@ def run_policy(problem_path: Path, model: torch.nn.Module, device: torch.device,
     seen = {tuple(value for row in grid for value in row)}
 
     for step in range(max_steps):
-        h_val = heuristic_value(grid)
-        if h_val == 0:
+        h_val = heuristic_value(grid, HEURISTIC_CFG)
+        if heuristic_is_zero(h_val, HEURISTIC_CFG):
             return EvalResult(True, step, history, h_val, match_count)
 
         grid_tensor = torch.tensor(grid, dtype=torch.long, device=device).unsqueeze(0)
@@ -111,7 +115,7 @@ def run_policy(problem_path: Path, model: torch.nn.Module, device: torch.device,
         grid = next_grid
         seen.add(tuple(value for row in grid for value in row))
 
-    return EvalResult(False, max_steps, history, heuristic_value(grid), match_count)
+    return EvalResult(False, max_steps, history, heuristic_value(grid, HEURISTIC_CFG), match_count)
 
 
 def main() -> None:

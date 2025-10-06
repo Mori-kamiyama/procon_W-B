@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, List, Tuple
+import math
+from typing import Dict, List, Optional, Tuple
+
+from .heuristic_config import HeuristicConfig, get_heuristic_config
 
 Grid = List[List[int]]
 
@@ -23,24 +26,46 @@ def manhattan(a: Tuple[int, int], b: Tuple[int, int]) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-def heuristic_value(grid: Grid) -> int:
-    """Heuristic used by old solvers: sum(max(0, dist - 1)) over all pairs.
+def heuristic_value(grid: Grid, config: Optional[HeuristicConfig] = None) -> float:
+    """Return heuristic defined by Euclidean/Chebyshev blend from `heuristic.yaml`.
 
-    If a value appears more than twice, we consider the best two occurrences.
-    If it appears once or zero times, contributes 0.
+    For each value, we consider the first two occurrences (consistent with solver
+    pairing). The contribution is
+
+        w_euclid * max(0, ||diff||_2 - offset_euclid)
+      + w_cheby  * max(0, ||diff||_inf - offset_chebyshev)
+
+    Values appearing fewer than twice contribute 0.
     """
+    cfg = config or get_heuristic_config()
     pos = pair_positions(grid)
-    total = 0
-    for v, coords in pos.items():
+    total = 0.0
+    for coords in pos.values():
         if len(coords) < 2:
             continue
-        # use two farthest or first two? The C++ solver pairs the two locations in input.
-        # Here we use the first two for consistency with typical two-occurrence datasets.
         a, b = coords[0], coords[1]
-        dist = manhattan(a, b)
-        if dist > 1:
-            total += dist - 1
-    return int(total)
+        dr = abs(a[0] - b[0])
+        dc = abs(a[1] - b[1])
+        euclid = math.hypot(dr, dc)
+        cheby = float(max(dr, dc))
+        contrib = 0.0
+        if cfg.weight_euclidean:
+            contrib += cfg.weight_euclidean * max(0.0, euclid - cfg.offset_euclidean)
+        if cfg.weight_chebyshev:
+            contrib += cfg.weight_chebyshev * max(0.0, cheby - cfg.offset_chebyshev)
+        if contrib > cfg.epsilon:
+            total += contrib
+    return 0.0 if total <= cfg.epsilon else float(total)
+
+
+def heuristic_zero_threshold(config: Optional[HeuristicConfig] = None) -> float:
+    cfg = config or get_heuristic_config()
+    return cfg.epsilon
+
+
+def heuristic_is_zero(value: float, config: Optional[HeuristicConfig] = None) -> bool:
+    cfg = config or get_heuristic_config()
+    return value <= cfg.epsilon
 
 
 def pairs_and_total(grid: Grid) -> Tuple[int, int]:

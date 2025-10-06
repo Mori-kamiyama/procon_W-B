@@ -7,10 +7,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from utils.io import load_problem, apply_ops
+from utils.heuristic_config import get_heuristic_config
 from utils.metrics import heuristic_value
 
 
 Grid = List[List[int]]
+
+HEURISTIC_CFG = get_heuristic_config()
 
 
 def save_board(path: Path, size: int, grid: Grid) -> None:
@@ -71,16 +74,17 @@ def rotate_once_inplace(grid: Grid, x: int, y: int, n: int) -> None:
 
 def best_candidates_by_heuristic(grid: Grid, cand: List[Tuple[int, int, int]], top_k: int) -> List[Tuple[int, int, int]]:
     """Return up to top_k candidates that reduce heuristic (or keep equal), sorted by new h."""
-    h0 = heuristic_value(grid)
-    scored: List[Tuple[int, Tuple[int, int, int]]] = []
+    h0 = heuristic_value(grid, HEURISTIC_CFG)
+    scored: List[Tuple[float, Tuple[int, int, int]]] = []
+    tol = max(HEURISTIC_CFG.epsilon, 1e-9)
     size = len(grid)
     # Work on a local copy for transforms
     for (x, y, n) in cand:
         # bounds are guaranteed by gen_candidates
         g2 = [row[:] for row in grid]
         rotate_once_inplace(g2, x, y, n)
-        h1 = heuristic_value(g2)
-        if h1 <= h0:
+        h1 = heuristic_value(g2, HEURISTIC_CFG)
+        if h1 <= h0 + tol:
             scored.append((h1, (x, y, n)))
     scored.sort(key=lambda t: t[0])
     return [op for _, op in scored[:top_k]]

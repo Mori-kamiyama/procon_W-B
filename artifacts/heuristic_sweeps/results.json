@@ -1,0 +1,338 @@
+{
+  "trials": [
+    {
+      "index": 3,
+      "params": {
+        "weight_euclidean": 0.30373965061421343,
+        "weight_chebyshev": 0.6962603493857865,
+        "offset_euclidean": 1.7367379933506633,
+        "offset_chebyshev": 1.001012682724881,
+        "epsilon": 1e-06
+      },
+      "solved": 2,
+      "total": 2,
+      "solved_rate": 1.0,
+      "avg_h": 85.65579166721194,
+      "avg_time": 1.075715,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": true,
+          "partial": false,
+          "h_final": 83.17997747304383,
+          "time_s": 1.57491
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": true,
+          "partial": false,
+          "h_final": 88.13160586138005,
+          "time_s": 0.57652
+        }
+      ]
+    },
+    {
+      "index": 1,
+      "params": {
+        "weight_euclidean": 0.5732101885025418,
+        "weight_chebyshev": 0.4267898114974582,
+        "offset_euclidean": 2.067597178069545,
+        "offset_chebyshev": 1.106625452157855,
+        "epsilon": 1e-06
+      },
+      "solved": 1,
+      "total": 2,
+      "solved_rate": 0.5,
+      "avg_h": 89.8943007776173,
+      "avg_time": 5.2885585,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": true,
+          "partial": false,
+          "h_final": 95.783529692854,
+          "time_s": 0.577017
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 84.0050718623806,
+          "time_s": 10.0001
+        }
+      ]
+    },
+    {
+      "index": 7,
+      "params": {
+        "weight_euclidean": 0.4873248041619139,
+        "weight_chebyshev": 0.5126751958380861,
+        "offset_euclidean": 1.454019553105434,
+        "offset_chebyshev": 2.23061985554328,
+        "epsilon": 1e-06
+      },
+      "solved": 0,
+      "total": 2,
+      "solved_rate": 0.0,
+      "avg_h": 84.58934246147929,
+      "avg_time": 10.00005,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 88.29179723903422,
+          "time_s": 10.0001
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 80.88688768392436,
+          "time_s": 10.0
+        }
+      ]
+    },
+    {
+      "index": 4,
+      "params": {
+        "weight_euclidean": 0.4823490686263068,
+        "weight_chebyshev": 0.5176509313736933,
+        "offset_euclidean": 2.120434471993179,
+        "offset_chebyshev": 2.3043319008791654,
+        "epsilon": 1e-06
+      },
+      "solved": 0,
+      "total": 2,
+      "solved_rate": 0.0,
+      "avg_h": 86.06012374729298,
+      "avg_time": 10.0,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 92.61105835184425,
+          "time_s": 10.0
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 79.50918914274172,
+          "time_s": 10.0
+        }
+      ]
+    },
+    {
+      "index": 0,
+      "params": {
+        "weight_euclidean": 0.5300230777783863,
+        "weight_chebyshev": 0.4699769222216138,
+        "offset_euclidean": 1.34114316166169,
+        "offset_chebyshev": 1.0178335005859267,
+        "epsilon": 1e-06
+      },
+      "solved": 0,
+      "total": 2,
+      "solved_rate": 0.0,
+      "avg_h": 87.51591760551433,
+      "avg_time": 10.0,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 100.52928491883038,
+          "time_s": 10.0
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 74.50255029219828,
+          "time_s": 10.0
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "params": {
+        "weight_euclidean": 0.4671689868257931,
+        "weight_chebyshev": 0.5328310131742068,
+        "offset_euclidean": 2.3162257703906706,
+        "offset_chebyshev": 1.5093737116347805,
+        "epsilon": 1e-06
+      },
+      "solved": 0,
+      "total": 2,
+      "solved_rate": 0.0,
+      "avg_h": 87.9748269553167,
+      "avg_time": 10.00005,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 102.54581162090784,
+          "time_s": 10.0001
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 73.40384228972555,
+          "time_s": 10.0
+        }
+      ]
+    },
+    {
+      "index": 9,
+      "params": {
+        "weight_euclidean": 0.6492979001214798,
+        "weight_chebyshev": 0.3507020998785202,
+        "offset_euclidean": 2.1496899542964663,
+        "offset_chebyshev": 1.8363064024637017,
+        "epsilon": 1e-06
+      },
+      "solved": 0,
+      "total": 2,
+      "solved_rate": 0.0,
+      "avg_h": 88.85584372666357,
+      "avg_time": 10.0,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 91.92314764950675,
+          "time_s": 10.0
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 85.78853980382038,
+          "time_s": 10.0
+        }
+      ]
+    },
+    {
+      "index": 5,
+      "params": {
+        "weight_euclidean": 0.32794451229673816,
+        "weight_chebyshev": 0.6720554877032617,
+        "offset_euclidean": 2.297676575935987,
+        "offset_chebyshev": 1.8679678638308825,
+        "epsilon": 1e-06
+      },
+      "solved": 0,
+      "total": 2,
+      "solved_rate": 0.0,
+      "avg_h": 89.0000812061277,
+      "avg_time": 10.00005,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 92.92784996607848,
+          "time_s": 10.0
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 85.07231244617692,
+          "time_s": 10.0001
+        }
+      ]
+    },
+    {
+      "index": 8,
+      "params": {
+        "weight_euclidean": 0.2778857953697276,
+        "weight_chebyshev": 0.7221142046302724,
+        "offset_euclidean": 1.5973986076711786,
+        "offset_chebyshev": 0.5280834003280379,
+        "epsilon": 1e-06
+      },
+      "solved": 0,
+      "total": 2,
+      "solved_rate": 0.0,
+      "avg_h": 89.36133933090113,
+      "avg_time": 10.0,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 91.36185436639683,
+          "time_s": 10.0
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 87.36082429540544,
+          "time_s": 10.0
+        }
+      ]
+    },
+    {
+      "index": 6,
+      "params": {
+        "weight_euclidean": 0.834382386010213,
+        "weight_chebyshev": 0.165617613989787,
+        "offset_euclidean": 1.3683436709075674,
+        "offset_chebyshev": 1.7217739468876032,
+        "epsilon": 1e-06
+      },
+      "solved": 0,
+      "total": 2,
+      "solved_rate": 0.0,
+      "avg_h": 94.46317449879905,
+      "avg_time": 10.0,
+      "metrics": [
+        {
+          "problem": "problems/8x8/p000.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 96.35170834379598,
+          "time_s": 10.0
+        },
+        {
+          "problem": "problems/8x8/p001.json",
+          "solved": false,
+          "partial": true,
+          "h_final": 92.5746406538021,
+          "time_s": 10.0
+        }
+      ]
+    }
+  ],
+  "suggestions": {
+    "weight_euclidean": {
+      "min": 0.22223613630567904,
+      "max": 0.8900320450742615
+    },
+    "weight_chebyshev": {
+      "min": 0.10996795492573846,
+      "max": 0.7777638636943209
+    },
+    "offset_euclidean": {
+      "min": 1.243634900788792,
+      "max": 2.4137340312635684
+    },
+    "offset_chebyshev": {
+      "min": 0.35045855027292516,
+      "max": 2.481956750934278
+    }
+  },
+  "summary": {
+    "best_trial": 3,
+    "best_rate": 1.0,
+    "best_avg_h": 85.65579166721194,
+    "best_avg_time": 1.075715
+  }
+}

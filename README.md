@@ -55,6 +55,34 @@ wandb agent <that-sweep-id>
   - `--max_depth` → `MAX_DEPTH` （g値の上限値）
   - `--time_limit_s` → `WASTAR_TIME_LIMIT_S`/`TIME_LIMIT_S` （ソルバーが途中最適解を返却する時間制限）
 
+## ヒューリスティック設定とスイープ自動化
+
+`heuristic.yaml`でヒューリスティックを調整できます。デフォルト形式は以下の通りです：
+
+```
+weights:
+  euclidean: 0.5
+  chebyshev: 0.5
+offsets:
+  euclidean: 1.0
+  chebyshev: 1.0
+epsilon: 1e-6
+```
+
+- `weights.*` はユークリッド距離とチェビシェフ距離の寄与を調整します。
+- `offsets.*` は距離から減算する閾値です（距離 <= 閾値なら寄与しません）。
+- `epsilon` は「ほぼ0」とみなす許容誤差で、C++ソルバーとPythonユーティリティ双方で共有されます。
+
+環境変数 `HEURISTIC_CONFIG_PATH`（互換の `WASTAR_HEURISTIC_CONFIG` でも可）で別ファイルを指定できます。Python側で環境変数を切り替えた後は `utils.heuristic_config.reload_heuristic_config()` を呼ぶとキャッシュが更新されます。
+
+ヒューリスティックの探索を自動化する場合は `tools/heuristic_sweep.py` を使ってください。デフォルトで100試行を実行し、上位結果から次に試す範囲を提案しつつ、全試行の詳細を `artifacts/heuristic_sweeps/results.json` に保存します。
+
+```
+python3 tools/heuristic_sweep.py --size 8 --max_problems 12 --trials 100 --normalize-weights
+```
+
+`--weight-*-range` や `--offset-*-range` で探索範囲を指定し、`--top-k` で提案に使う上位試行数を調整できます。
+
 ## 注意事項
 
 - CLIソルバーは`core/wastar.cpp`から`core/wastar`に自動的にコンパイルされます（`g++`または`clang++`が必要です）。

@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Tuple
 
 from utils.io import load_problem, apply_ops
-from utils.metrics import heuristic_value
+from utils.heuristic_config import HeuristicConfig, get_heuristic_config
+from utils.metrics import heuristic_is_zero, heuristic_value
 
 Grid = List[List[int]]
 Op = Dict[str, int]
@@ -31,20 +32,21 @@ def greedy_rollout(
     ops: Sequence[Op],
     max_steps: int,
     sample_budget: int,
+    config: HeuristicConfig,
 ) -> Tuple[bool, List[Tuple[Grid, Op]]]:
     state: Grid = [row[:] for row in grid]
     visited = {flatten(state)}
     samples: List[Tuple[Grid, Op]] = []
     for _ in range(max_steps):
-        if heuristic_value(state) == 0:
+        if heuristic_is_zero(heuristic_value(state, config), config):
             return True, samples
-        best_choice: Tuple[int, Op, Grid, Tuple[int, ...]] | None = None
+        best_choice: Tuple[float, Op, Grid, Tuple[int, ...]] | None = None
         for op in ops:
             next_state = apply_ops(state, [op])
             key = flatten(next_state)
             if key in visited:
                 continue
-            h_val = heuristic_value(next_state)
+            h_val = heuristic_value(next_state, config)
             if best_choice is None or h_val < best_choice[0]:
                 best_choice = (h_val, op, next_state, key)
         if best_choice is None:
@@ -68,6 +70,7 @@ def generate_dataset(
     ops = enumerate_ops(size)
     collected = 0
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    cfg = get_heuristic_config()
     with output_path.open("w", encoding="utf-8") as f_out:
         for problem_path in sorted((problems_root / f"{size}x{size}").glob("*.json")):
             data = load_problem(problem_path)
@@ -76,6 +79,7 @@ def generate_dataset(
                 ops,
                 max_steps=max_steps,
                 sample_budget=max(0, max_samples - collected),
+                config=cfg,
             )
             if not samples:
                 continue

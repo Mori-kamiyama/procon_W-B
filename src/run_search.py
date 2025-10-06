@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from utils.io import apply_ops, list_problem_files, load_problem, save_solution
+from utils.heuristic_config import get_heuristic_config
 from utils.metrics import heuristic_value, pairs_rate
 
 
@@ -93,6 +94,7 @@ def run_one_problem(
     """
     data = load_problem(problem_path)
     grid0 = data["entities"]
+    heuristic_cfg = get_heuristic_config()
     env = os.environ.copy()
     env["WASTAR_W"] = str(max(1.0, float(w_weight)))
     if alpha is not None:
@@ -144,7 +146,7 @@ def run_one_problem(
     # Post metrics
     grid_final = apply_ops(grid0, ops) if ops else grid0
     pr = pairs_rate(grid_final)
-    hfin = heuristic_value(grid_final)
+    hfin = heuristic_value(grid_final, heuristic_cfg)
 
     # Extract solver metrics if present
     solved = bool(result.get("solved", False)) if 'result' in locals() else False
@@ -162,7 +164,7 @@ def run_one_problem(
         "time_s": float(time_solver) if time_solver is not None else (t1 - t0),
         "ops": ops,
         "pairs_rate": float(pr),
-        "h_final": int(hfin),
+        "h_final": float(hfin),
         "ops_count": int(len(ops)),
         "solved": solved,
         "partial": partial,

@@ -10,6 +10,7 @@ from torch import Tensor
 from torch.utils.data import Dataset
 
 from utils.io import apply_ops
+from utils.heuristic_config import HeuristicConfig, get_heuristic_config
 from utils.metrics import heuristic_value
 
 Op = Dict[str, int]
@@ -69,8 +70,9 @@ class GreedyTeacherDataset(Dataset):
         self.ops = enumerate_ops(size)
         self.augment = augment_rotations
         self.rng = random.Random(seed)
+        self._heuristic_config: HeuristicConfig = get_heuristic_config()
 
-        self.records: List[Tuple[Tensor, int]] = []
+        self.records: List[Tuple[Tensor, int, Tensor]] = []
         self.max_value = 0
         tmp_records: List[Tuple[Tensor, int, Tensor]] = []
         with self.jsonl_path.open("r", encoding="utf-8") as f:
@@ -124,16 +126,18 @@ class GreedyTeacherDataset(Dataset):
         }
 
     def _compute_optimal_mask(self, grid: Tensor) -> Tensor:
-        best = None
+        cfg = self._heuristic_config
+        tol = max(cfg.epsilon, 1e-9)
+        best: float | None = None
         best_indices: List[int] = []
         grid_list = grid.tolist()
         for idx, op in enumerate(self.ops):
             new_grid = apply_ops(grid_list, [op])
-            score = heuristic_value(new_grid)
-            if best is None or score < best:
+            score = heuristic_value(new_grid, cfg)
+            if best is None or score + tol < best:
                 best = score
                 best_indices = [idx]
-            elif score == best:
+            elif best is not None and abs(score - best) <= tol:
                 best_indices.append(idx)
         mask = torch.zeros(len(self.ops), dtype=torch.float32)
         if best_indices:

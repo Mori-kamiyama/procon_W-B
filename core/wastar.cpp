@@ -14,6 +14,9 @@
 #include <random>
 #include <chrono>
 #include <climits>
+#include <cmath>
+#include <cctype>
+#include <cstdlib>
 #if defined(__APPLE__) || defined(__linux__)
 #include <sys/resource.h>
 #endif
@@ -26,6 +29,92 @@ static double W_WEIGHT = 2.0;
 static double ALPHA = 0.0;          // h_eff = (1-ALPHA)*hsum + ALPHA*hcount
 enum TieMode { TB_H_MIN=0, TB_H_MAX=1, TB_G_MIN=2, TB_G_MAX=3 };
 static TieMode TIE_BREAK = TB_H_MIN; // tie-breaker on equal f
+
+struct HeuristicConfig {
+    double weight_euclidean = 1.0;
+    double weight_chebyshev = 0.0;
+    double offset_euclidean = 1.0;
+    double offset_chebyshev = 1.0;
+    double epsilon = 1e-9;
+};
+
+static HeuristicConfig HCONF;
+
+static std::string trim_copy(const std::string& s){
+    const char* ws = " \t\n\r";
+    size_t start = s.find_first_not_of(ws);
+    if (start == std::string::npos) return "";
+    size_t end = s.find_last_not_of(ws);
+    return s.substr(start, end - start + 1);
+}
+
+static bool parse_double(const std::string& txt, double& out){
+    try {
+        size_t idx = 0;
+        out = std::stod(txt, &idx);
+        while (idx < txt.size() && std::isspace(static_cast<unsigned char>(txt[idx]))) idx++;
+        if (idx != txt.size()) return false;
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
+static bool load_heuristic_config_file(const std::string& path, HeuristicConfig& out_cfg){
+    if (path.empty()) return false;
+    std::ifstream in(path);
+    if (!in.is_open()) return false;
+    std::string section;
+    std::string line;
+    bool modified = false;
+    while (std::getline(in, line)){
+        auto hash_pos = line.find('#');
+        if (hash_pos != std::string::npos) line = line.substr(0, hash_pos);
+        std::string trimmed = trim_copy(line);
+        if (trimmed.empty()) continue;
+        if (!trimmed.empty() && trimmed.back() == ':'){
+            section = trim_copy(trimmed.substr(0, trimmed.size()-1));
+            continue;
+        }
+        auto colon = trimmed.find(':');
+        if (colon == std::string::npos) continue;
+        std::string key = trim_copy(trimmed.substr(0, colon));
+        std::string value = trim_copy(trimmed.substr(colon+1));
+        if (!value.empty()){
+            char first = value.front();
+            char last = value.back();
+            bool quoted = (first == '"' || first == 39);
+            if (quoted && first == last && value.size() >= 2){
+                value = value.substr(1, value.size()-2);
+            }
+        }
+        std::string full_key = section.empty() ? key : (section + "." + key);
+        double parsed = 0.0;
+        if (!parse_double(value, parsed)) continue;
+        modified = true;
+        if (full_key == "weights.euclidean" || full_key == "weights_euclidean") out_cfg.weight_euclidean = parsed;
+        else if (full_key == "weights.chebyshev" || full_key == "weights_chebyshev") out_cfg.weight_chebyshev = parsed;
+        else if (full_key == "offsets.euclidean" || full_key == "offsets_euclidean") out_cfg.offset_euclidean = parsed;
+        else if (full_key == "offsets.chebyshev" || full_key == "offsets_chebyshev") out_cfg.offset_chebyshev = parsed;
+        else if (full_key == "epsilon") out_cfg.epsilon = std::max(1e-12, parsed);
+    }
+    return modified;
+}
+
+static void init_heuristic_config(){
+    HeuristicConfig cfg;
+    std::vector<std::string> candidates;
+    if (const char* env = std::getenv("HEURISTIC_CONFIG_PATH")) candidates.emplace_back(env);
+    if (const char* env = std::getenv("WASTAR_HEURISTIC_CONFIG")) candidates.emplace_back(env);
+    candidates.emplace_back("heuristic.yaml");
+    for (const auto& path : candidates){
+        if (load_heuristic_config_file(path, cfg)){
+            HCONF = cfg;
+            return;
+        }
+    }
+    HCONF = cfg;
+}
 
 // -------- Parsing --------
 static bool parse_input(const std::string& filename, int& size, std::vector<std::vector<int>>& grid) {
@@ -87,13 +176,20 @@ struct Zobrist {
 };
 
 // -------- Heuristic and helpers --------
-static inline int contrib_sum(const PairPos& p){
-    int d = std::abs(p.r1 - p.r2) + std::abs(p.c1 - p.c2);
-    return d>1 ? (d-1) : 0;
+static inline double contrib_sum(const PairPos& p){
+    if (p.r1 < 0 || p.c1 < 0 || p.r2 < 0 || p.c2 < 0) return 0.0;
+    double dr = static_cast<double>(std::abs(p.r1 - p.r2));
+    double dc = static_cast<double>(std::abs(p.c1 - p.c2));
+    double euclid = std::hypot(dr, dc);
+    double cheby = std::max(dr, dc);
+    double val_e = std::max(0.0, euclid - HCONF.offset_euclidean);
+    double val_c = std::max(0.0, cheby - HCONF.offset_chebyshev);
+    double total = HCONF.weight_euclidean * val_e + HCONF.weight_chebyshev * val_c;
+    if (total < HCONF.epsilon) return 0.0;
+    return total;
 }
 static inline int contrib_cnt(const PairPos& p){
-    int d = std::abs(p.r1 - p.r2) + std::abs(p.c1 - p.c2);
-    return d>1 ? 1 : 0;
+    return contrib_sum(p) > HCONF.epsilon ? 1 : 0;
 }
 
 static inline bool in_sub(int r,int c,int y,int x,int n){ return (r>=y && r<y+n && c>=x && c<x+n); }
@@ -101,8 +197,8 @@ static inline std::pair<int,int> rot_map(int r,int c,int y,int x,int n){
     int i = r - y, j = c - x; return { y + j, x + (n - 1 - i) };
 }
 
-static int compute_hsum_full(const std::vector<PairPos>& pos){
-    long long s=0; for (const auto& p: pos) if (p.r1>=0 && p.r2>=0) s += contrib_sum(p); return (int)s;
+static double compute_hsum_full(const std::vector<PairPos>& pos){
+    double s=0.0; for (const auto& p: pos) if (p.r1>=0 && p.r2>=0) s += contrib_sum(p); return s;
 }
 static int compute_hcnt_full(const std::vector<PairPos>& pos){
     long long c=0; for (const auto& p: pos) if (p.r1>=0 && p.r2>=0) c += contrib_cnt(p); return (int)c;
@@ -110,7 +206,7 @@ static int compute_hcnt_full(const std::vector<PairPos>& pos){
 
 // -------- State --------
 struct Node {
-    int g; int hsum; int hcnt; double f; uint64_t hash; // minimal state for PQ
+    int g; double hsum; int hcnt; double f; uint64_t hash; // minimal state for PQ
 };
 
 static inline double h_eff(const Node& n){ return (1.0-ALPHA)*(double)n.hsum + ALPHA*(double)n.hcnt; }
@@ -132,9 +228,11 @@ struct ParentInfo { uint64_t parent_hash; Operation op; bool has_parent=false; }
 
 // -------- Focused candidate generation --------
 static void worst_pairs(const std::vector<PairPos>& pos, int k, std::vector<int>& out_idx){
-    std::vector<std::pair<int,int>> tmp; tmp.reserve(pos.size());
+    std::vector<std::pair<double,int>> tmp; tmp.reserve(pos.size());
     for (int i=0;i<(int)pos.size();++i){ if (pos[i].r1>=0 && pos[i].r2>=0){ tmp.push_back({contrib_sum(pos[i]), i}); } }
-    std::nth_element(tmp.begin(), tmp.begin()+std::min(k,(int)tmp.size()), tmp.end(), [](auto&a,auto&b){return a.first>b.first;});
+    if (!tmp.empty() && k < (int)tmp.size()){
+        std::nth_element(tmp.begin(), tmp.begin()+k, tmp.end(), [](const auto& a,const auto& b){return a.first>b.first;});
+    }
     out_idx.clear(); int limit = std::min(k,(int)tmp.size());
     for (int i=0;i<limit;i++) out_idx.push_back(tmp[i].second);
 }
@@ -199,7 +297,7 @@ static void rotate_apply(std::vector<std::vector<int>>& grid, int x,int y,int n,
 
 // helper: emit solution JSON (supports solved/partial)
 static void emit_solution_json(const std::vector<Operation>& ops, bool solved, bool partial,
-                              int hsum, int hcnt, double heff,
+                              double hsum, int hcnt, double heff,
                               double time_s, long long nodes_expanded,
                               long long nodes_generated, size_t open_max,
                               double peak_rss_mb,
@@ -244,6 +342,8 @@ int main(int argc, char* argv[]){
         else if (s=="g_min") TIE_BREAK = TB_G_MIN; else if (s=="g_max") TIE_BREAK = TB_G_MAX;
     }
 
+    init_heuristic_config();
+
     int N; std::vector<std::vector<int>> grid0;
     if (!parse_input(argv[1], N, grid0)) return 1;
     int vmax=0; for (auto& r: grid0) for (int v: r) vmax = std::max(vmax, v);
@@ -253,7 +353,7 @@ int main(int argc, char* argv[]){
     std::vector<int> cnt(vmax+1,0);
     for (int r=0;r<N;r++) for (int c=0;c<N;c++){
         int v=grid0[r][c]; if (cnt[v]==0){ pos0[v].r1=r; pos0[v].c1=c; } else { pos0[v].r2=r; pos0[v].c2=c; } cnt[v]++; }
-    int hsum0 = compute_hsum_full(pos0);
+    double hsum0 = compute_hsum_full(pos0);
     int hcnt0 = compute_hcnt_full(pos0);
     Zobrist zob(N, vmax);
     uint64_t hash0 = zob.hash_grid(grid0);
@@ -303,9 +403,9 @@ int main(int argc, char* argv[]){
     size_t open_max = 1;
 
     // track best-so-far by h_eff (then f, then g)
-    uint64_t best_hash = hash0; int best_hsum = hsum0; int best_hcnt = hcnt0; int best_gval = 0; double best_f = 0 + W_WEIGHT*((1.0-ALPHA)*hsum0 + ALPHA*hcnt0);
+    uint64_t best_hash = hash0; double best_hsum = hsum0; int best_hcnt = hcnt0; int best_gval = 0; double best_f = 0 + W_WEIGHT*((1.0-ALPHA)*hsum0 + ALPHA*hcnt0);
 
-    auto emit_from_hash = [&](uint64_t h, bool solved, bool partial, int hsum_val, int hcnt_val, double time_s){
+    auto emit_from_hash = [&](uint64_t h, bool solved, bool partial, double hsum_val, int hcnt_val, double time_s){
         std::vector<Operation> ops;
         uint64_t curh = h;
         while (true){
@@ -350,9 +450,9 @@ int main(int argc, char* argv[]){
         }
 
         // goal?
-        if (cur.hsum == 0){
+        if (cur.hsum <= HCONF.epsilon){
             using namespace std::chrono; double tsec = duration<double>(steady_clock::now() - t_start).count();
-            emit_from_hash(cur.hash, true, false, 0, 0, tsec);
+            emit_from_hash(cur.hash, true, false, 0.0, 0, tsec);
             return 0;
         }
 
@@ -373,7 +473,7 @@ int main(int argc, char* argv[]){
         }
 
         // pre-evaluate candidates (Δh and fnext), then push top-K
-        struct CandEval { Operation op; int hsum_next; int hcnt_next; int gnext; double fnext; std::vector<PairPos> pnext; };
+        struct CandEval { Operation op; double hsum_next; int hcnt_next; int gnext; double fnext; std::vector<PairPos> pnext; };
         std::vector<CandEval> evals; evals.reserve(cand.size());
 
         // reuse mark array to avoid repeated allocations
@@ -383,7 +483,7 @@ int main(int argc, char* argv[]){
             std::vector<int> affected; affected.reserve(op.n*op.n);
             for (int i=0;i<op.n;i++) for (int j=0;j<op.n;j++){
                 int v = gcur[op.y+i][op.x+j]; if (!mark[v]){ mark[v]=1; affected.push_back(v);} }
-            int oldSum=0, newSum=0; int oldCnt=0, newCnt=0; std::vector<PairPos> pnext = pcur;
+            double oldSum=0.0, newSum=0.0; int oldCnt=0, newCnt=0; std::vector<PairPos> pnext = pcur;
             for (int v: affected){
                 oldSum += contrib_sum(pcur[v]);
                 oldCnt += contrib_cnt(pcur[v]);
@@ -394,7 +494,7 @@ int main(int argc, char* argv[]){
                 newCnt += contrib_cnt(np);
                 pnext[v]=np;
             }
-            int hsum_next = cur.hsum + (newSum - oldSum);
+            double hsum_next = cur.hsum + (newSum - oldSum);
             int hcnt_next = cur.hcnt + (newCnt - oldCnt);
             int gnext = cur.g + 1;
             double heff_next = (1.0-ALPHA)*hsum_next + ALPHA*hcnt_next;
