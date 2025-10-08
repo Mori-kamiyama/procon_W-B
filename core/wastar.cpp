@@ -33,8 +33,10 @@ static TieMode TIE_BREAK = TB_H_MIN; // tie-breaker on equal f
 struct HeuristicConfig {
     double weight_euclidean = 1.0;
     double weight_chebyshev = 0.0;
+    double weight_manhattan = 0.0;
     double offset_euclidean = 1.0;
     double offset_chebyshev = 1.0;
+    double offset_manhattan = 1.0;
     double epsilon = 1e-9;
 };
 
@@ -94,8 +96,10 @@ static bool load_heuristic_config_file(const std::string& path, HeuristicConfig&
         modified = true;
         if (full_key == "weights.euclidean" || full_key == "weights_euclidean") out_cfg.weight_euclidean = parsed;
         else if (full_key == "weights.chebyshev" || full_key == "weights_chebyshev") out_cfg.weight_chebyshev = parsed;
+        else if (full_key == "weights.manhattan" || full_key == "weights_manhattan") out_cfg.weight_manhattan = parsed;
         else if (full_key == "offsets.euclidean" || full_key == "offsets_euclidean") out_cfg.offset_euclidean = parsed;
         else if (full_key == "offsets.chebyshev" || full_key == "offsets_chebyshev") out_cfg.offset_chebyshev = parsed;
+        else if (full_key == "offsets.manhattan" || full_key == "offsets_manhattan") out_cfg.offset_manhattan = parsed;
         else if (full_key == "epsilon") out_cfg.epsilon = std::max(1e-12, parsed);
     }
     return modified;
@@ -182,9 +186,13 @@ static inline double contrib_sum(const PairPos& p){
     double dc = static_cast<double>(std::abs(p.c1 - p.c2));
     double euclid = std::hypot(dr, dc);
     double cheby = std::max(dr, dc);
+    double manhattan = dr + dc;
     double val_e = std::max(0.0, euclid - HCONF.offset_euclidean);
     double val_c = std::max(0.0, cheby - HCONF.offset_chebyshev);
-    double total = HCONF.weight_euclidean * val_e + HCONF.weight_chebyshev * val_c;
+    double val_m = std::max(0.0, manhattan - HCONF.offset_manhattan);
+    double total = HCONF.weight_euclidean * val_e
+                 + HCONF.weight_chebyshev * val_c
+                 + HCONF.weight_manhattan * val_m;
     if (total < HCONF.epsilon) return 0.0;
     return total;
 }

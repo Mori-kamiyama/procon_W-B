@@ -11,8 +11,10 @@ from typing import Dict, Optional
 class HeuristicConfig:
     weight_euclidean: float = 1.0
     weight_chebyshev: float = 0.0
+    weight_manhattan: float = 0.0
     offset_euclidean: float = 1.0
     offset_chebyshev: float = 1.0
+    offset_manhattan: float = 1.0
     epsilon: float = 1e-9
 
 
@@ -71,15 +73,19 @@ def load_heuristic_config(path: Optional[Path] = None) -> HeuristicConfig:
 
     weight_euclidean = data.get("weights.euclidean", base.weight_euclidean)
     weight_chebyshev = data.get("weights.chebyshev", base.weight_chebyshev)
+    weight_manhattan = data.get("weights.manhattan", base.weight_manhattan)
     offset_euclidean = data.get("offsets.euclidean", base.offset_euclidean)
     offset_chebyshev = data.get("offsets.chebyshev", base.offset_chebyshev)
+    offset_manhattan = data.get("offsets.manhattan", base.offset_manhattan)
     epsilon = max(1e-12, data.get("epsilon", base.epsilon))
 
     return HeuristicConfig(
         weight_euclidean=weight_euclidean,
         weight_chebyshev=weight_chebyshev,
+        weight_manhattan=weight_manhattan,
         offset_euclidean=offset_euclidean,
         offset_chebyshev=offset_chebyshev,
+        offset_manhattan=offset_manhattan,
         epsilon=epsilon,
     )
 

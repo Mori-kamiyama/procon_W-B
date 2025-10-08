@@ -48,11 +48,14 @@ def heuristic_value(grid: Grid, config: Optional[HeuristicConfig] = None) -> flo
         dc = abs(a[1] - b[1])
         euclid = math.hypot(dr, dc)
         cheby = float(max(dr, dc))
+        manhattan = float(dr + dc)
         contrib = 0.0
         if cfg.weight_euclidean:
             contrib += cfg.weight_euclidean * max(0.0, euclid - cfg.offset_euclidean)
         if cfg.weight_chebyshev:
             contrib += cfg.weight_chebyshev * max(0.0, cheby - cfg.offset_chebyshev)
+        if cfg.weight_manhattan:
+            contrib += cfg.weight_manhattan * max(0.0, manhattan - cfg.offset_manhattan)
         if contrib > cfg.epsilon:
             total += contrib
     return 0.0 if total <= cfg.epsilon else float(total)
