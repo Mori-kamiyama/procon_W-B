@@ -1,0 +1,7 @@
+weights:
+  euclidean: 0.7
+  chebyshev: 0.3
+offsets:
+  euclidean: 1.0
+  chebyshev: 1.0
+epsilon: 1e-6
