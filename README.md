@@ -11,6 +11,39 @@
 python3 src/run_search.py --size 4 --max_problems 3 --w 2.0 --time_limit_s 5
 ```
 
+## 教師データ（模倣学習用）の生成
+
+- 既存の問題セットを解いて「盤面 → 次の一手」のペアをJSONL形式で生成します。
+- 足りないサンプルはランダムにスクランブルした問題を自動生成して補完します（再現性のため乱数シード指定可）。
+
+```
+python3 src/generate_teacher_data.py \
+  --size 6 \
+  --target_samples 3000 \
+  --output artifacts/datasets/teacher_greedy_6x6.jsonl \
+  --scramble-seed 42
+```
+
+- 生成結果：
+  - 教師データ本体 → `artifacts/datasets/teacher_greedy_6x6.jsonl`
+  - 追加生成した問題（再現用） → `artifacts/datasets/teacher_greedy_6x6_problems/`
+
+## CNNポリシーネットの学習
+
+- 教師データを用いて「盤面 → 旋回操作」の模倣ポリシーを学習するシンプルなCNNトレーナーを追加しました。
+- 盤面は各タイル値をワンホット化したチャネルとして入力され、出力は`(x, y, n)`の組み合わせ55クラス（6x6の場合）の分類問題になります。
+- 例：
+
+```
+python3 src/train_policy_cnn.py \
+  --dataset artifacts/datasets/teacher_greedy_6x6.jsonl \
+  --epochs 30 \
+  --batch-size 128 \
+  --save-path artifacts/models/policy_cnn.pt
+```
+
+- 実行すると学習および検証ロス・精度がエポックごとに標準出力へ表示され、`--save-path`を指定した場合は最良検証精度の重みが保存されます。
+
 ## スイープ対応トレーナー（Weights & Biasesオプション）
 
 - 同じ評価を実行しつつ、問題ごとのメトリクスと概要をログ記録します。
